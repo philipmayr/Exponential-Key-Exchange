@@ -1,6 +1,5 @@
 // Exponential Key Exchange
 
-#include <math.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -8,6 +7,8 @@
 
 typedef uint64_t integer;
 typedef const uint64_t constant_integer;
+
+const double EXPONENTIAL_CONSTANT = 2.718281828459045235357;
 
 integer draw_random_integer(integer exclusive_lower_bound, integer exclusive_upper_bound)
 {
@@ -30,13 +31,38 @@ integer find_totient(integer number)
     return totient;
 }
 
-integer find_binary_logarithm(integer number)
+integer depotentiate_binarily(integer number)
 {
-    integer logarithm = 1;
+    integer exponent = 1;
     
-    while (number >>= 1) logarithm++;
+    while (number >>= 1) exponent++;
     
-    return logarithm;
+    return exponent;
+}
+
+double depotentiate_by_exponential_constant(double number)
+{
+    double inverse_of_binary_depotentiation_of_exponential_constant = 1.0 / depotentiate_binarily(EXPONENTIAL_CONSTANT);
+    
+    double natural_depotentiation = depotentiate_binarily(number) * inverse_of_binary_depotentiation_of_exponential_constant;
+    
+    return natural_depotentiation;
+}
+
+double find_square_root(double square)
+{
+    double x = square;
+    double y = 1;
+    
+    double epsilon = 0.000001;
+    
+    while ((x - y) > epsilon)
+    {
+        x = (x + y) / 2;
+        y = square / x;
+    }
+    
+    return x;
 }
 
 integer * find_distinct_prime_factors(integer number, integer * upper_bound)
@@ -54,7 +80,7 @@ integer * find_distinct_prime_factors(integer number, integer * upper_bound)
         do number >>= 1; while (~number & 1);
     }
     
-    for (integer factor_candidate = 3; factor_candidate <= sqrt(number); factor_candidate += 2)
+    for (integer factor_candidate = 3; factor_candidate <= find_square_root(number); factor_candidate += 2)
     {
         if (number % factor_candidate == 0) 
         {
@@ -95,7 +121,7 @@ integer * find_prime_factors(integer number, integer * upper_bound)
         index++;
     }
     
-    for (integer factor_candidate = 3; factor_candidate <= sqrt(number); factor_candidate += 2)
+    for (integer factor_candidate = 3; factor_candidate <= find_square_root(number); factor_candidate += 2)
     {
         while (number % factor_candidate == 0)
         {
@@ -121,7 +147,7 @@ integer exponentiate(integer base, integer index)
     if (base == 0) return 0;
     if (index == 0) return 1;
     if (index == 1) return base;
-
+    
     integer power = 1;
     
     while (index)
@@ -137,7 +163,7 @@ integer exponentiate_modularly(integer base, integer index, integer modulus)
 {
     if (base == 0) return 0;
     if (index == 0) return 1;
-
+    
     if (base > modulus) base %= modulus;
     if (index == 1) return base;
     
@@ -163,10 +189,10 @@ integer test_primality(integer prime_candidate, integer rounds)
     
     integer greatest_power_of_two_factor_of_prime_candidate_less_one = 1;
     constant_integer prime_candidate_less_one = prime_candidate - 1;
-
+    
     while (prime_candidate_less_one % exponentiate(2, greatest_power_of_two_factor_of_prime_candidate_less_one) == 0) 
         greatest_power_of_two_factor_of_prime_candidate_less_one++;
-
+    
     greatest_power_of_two_factor_of_prime_candidate_less_one--;
     
     constant_integer multiplier = prime_candidate_less_one / exponentiate(2, greatest_power_of_two_factor_of_prime_candidate_less_one);
@@ -211,7 +237,8 @@ integer find_least_primitive_root(integer prime_number)
     
     integer * primitive_roots = malloc(sizeof (int) * number_of_primitive_roots);
     
-    integer upper_bound = log(prime_number) / log(log(prime_number_less_one));
+    integer upper_bound = depotentiate_by_exponential_constant(prime_number) / 
+                          depotentiate_by_exponential_constant(depotentiate_by_exponential_constant(prime_number_less_one));
     
     integer * distinct_prime_factors = find_distinct_prime_factors(prime_number_less_one, & upper_bound);
     
@@ -251,13 +278,13 @@ integer find_prime_number(integer bit_length)
 integer main()
 {
     srand(time(NULL));
-
+    
     constant_integer bit_length = 16;
     
     // set domain parameters
     constant_integer public_prime_modulus = find_prime_number(bit_length);
     constant_integer public_primitive_root = find_least_primitive_root(public_prime_modulus); // generator
-
+    
     // transmitter
     constant_integer transmitter_private_exponent_key = draw_random_integer(1, public_prime_modulus - 1);
     constant_integer transmitter_public_power = exponentiate_modularly(public_primitive_root, transmitter_private_exponent_key, public_prime_modulus);
